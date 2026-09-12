@@ -100,13 +100,18 @@
     aspect-ratio: 1 / 1;
     overflow: hidden;
     cursor: pointer;
-    background: #333;
+    background: #fff;
   }
   #challenge .tile img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
+    transition: opacity 0.3s ease;
+  }
+  #challenge .grid.fading .tile img {
+    opacity: 0;
+
   }
   #challenge .tile .tick {
     position: absolute;
@@ -123,7 +128,6 @@
     box-shadow: inset 0 0 0 3px var(--blue);
   }
   #challenge .tile.selected .tick { display: flex; }
-  #challenge .tile.dim { opacity: 0; transition: opacity 0.2s; }
 
   #challenge .footer {
     display: flex;
@@ -175,6 +179,7 @@
     border-radius: 4px;
     opacity: 0.85;
     display: none;
+    max-width: 280px;
   }
 </style>
 </head>
@@ -196,14 +201,11 @@
 <!-- Stage 2: the image challenge -->
 <div id="challenge">
   <div class="prompt">
-    <div id="promptText">Select all squares with <span class="strong">buses</span></div>
+    <div id="promptText"></div>
     <div style="font-size:12px; opacity:0.8; margin-top:2px;">If there are none, click Verify.</div>
   </div>
   <div class="grid" id="grid"></div>
   <div class="footer">
-    <button class="icon-btn" id="reloadBtn" title="Get a new challenge">
-      <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L14 11h7V4l-3.35 2.35z"/></svg>
-    </button>
     <div class="msg" id="msg"></div>
     <button class="verify" id="verifyBtn">Verify</button>
   </div>
@@ -215,32 +217,60 @@
 /* =========================================================================
    CONFIG — this is the only section you should need to edit.
    ========================================================================= */
+// Builds ['folder/prefixN.jpg', ...] for N = 1..count. Lets you just bump a
+// count instead of typing out every filename as you add more photos.
+function imageList(folder, prefix, count, ext = 'jpg') {
+  const out = [];
+  for (let i = 1; i <= count; i++) out.push(`${folder}/${prefix}${i}.${ext}`);
+  return out;
+}
+
 const CONFIG = {
-  // One digit per round, in order. Digit 1-9 -> bus sits in that keypad
-  // position (1=top-left, 2=top-mid, 3=top-right, 4=mid-left, ... 9=bottom-right).
-  // Digit 0 -> no bus anywhere; Verify always fails and auto-advances.
-  // REPLACE with your real 15-digit sequence.
-  digitSequence: [3, 8, 0, 1, 9, 4, 0, 2, 7, 5, 0, 6, 1, 9, 0],
+  // A shared fallback pool of "nothing to see here" photos, used by any
+  // category below that doesn't define its own emptyImages.
+  // Update the count (2nd number) to match how many street_images/streetN.jpg
+  // files you actually have.
+  defaultEmptyImages: imageList('street_images', 'street', 62),
 
-  // Path(s) to your bus photo(s). One is picked at random each round that needs one.
-  busImages: [
-    'images/bus1.jpg',
-    'images/bus2.jpg',
-    'images/bus3.jpg'
-  ],
-
-  // Path(s) to your non-bus "street" photos. Needs at least 8 for variety;
-  // more is better so the grid doesn't repeat obviously round to round.
-  emptyImages: [
-    'images/street1.jpg',
-    'images/street2.jpg',
-    'images/street3.jpg',
-    'images/street4.jpg',
-    'images/street5.jpg',
-    'images/street6.jpg',
-    'images/street7.jpg',
-    'images/street8.jpg',
-    'images/street9.jpg'
+  // One entry per target category. Add as many as you like — one is chosen
+  // at random on every full page load (won't repeat the same one twice in a
+  // row). Each category has its OWN 15-digit sequence, so you can spread a
+  // longer puzzle across categories, or reuse the same sequence in more than
+  // one category if you'd rather have redundancy instead.
+  //
+  // digitSequence: digit 1-9 -> bus/hydrant/etc. sits in that keypad position
+  // (1=top-left, 2=top-mid, 3=top-right, 4=mid-left, ... 9=bottom-right).
+  // digit 0 -> nothing there; Verify always fails and auto-advances.
+  //
+  // targetImages count = how many busN.jpg / hydrantN.jpg / etc. files you have
+  // in that folder. Bump it as you add more photos — no need to list filenames.
+  categories: [
+    {
+      name: 'buses',
+      prompt: 'Select all squares with <span class="strong">buses</span>',
+      digitSequence: [3, 3, 3, 3, 7, 9, 0, 1, 5, 1, 0, 3, 8, 9, 3], // REPLACE
+      targetImages: imageList('bus_images', 'bus', 19) // set count to match your folder
+    },
+    {
+      name: 'fire hydrants',
+      prompt: 'Select all squares with <span class="strong">fire hydrants</span>',
+      digitSequence: [3, 3, 3, 3, 7, 9, 0, 1, 5, 1, 0, 3, 8, 9, 3], // REPLACE
+      targetImages: imageList('hydrant_images', 'hydrant', 17) // set count to match your folder
+    },
+    {
+      name: 'motorcycles',
+      prompt: 'Select all squares with <span class="strong">motorcycles</span>',
+      digitSequence: [3, 3, 3, 3, 7, 9, 0, 1, 5, 1, 0, 3, 8, 9, 3], // REPLACE
+      targetImages: imageList('motorcycle_images', 'motorcycle', 14) // set count to match your folder
+    }
+    // No trafficlight_images folder was mentioned, so this category is left out
+    // for now. Add one back the same way if you create that folder:
+    // {
+    //   name: 'traffic lights',
+    //   prompt: 'Select all squares with <span class="strong">traffic lights</span>',
+    //   digitSequence: [ ... 15 digits ... ],
+    //   targetImages: imageList('trafficlight_images', 'trafficlight', 3)
+    // }
   ],
 
   // How long (ms) to show the "Verified" / auto-advance pause before the
@@ -249,7 +279,7 @@ const CONFIG = {
 };
 /* ========================================================================= */
 
-const state = { round: 0, selected: null };
+const state = { round: 0, selected: null, category: null };
 
 const checkboxWidget = document.getElementById('checkboxWidget');
 const challenge = document.getElementById('challenge');
@@ -258,7 +288,20 @@ const msgEl = document.getElementById('msg');
 const promptText = document.getElementById('promptText');
 const debugBadge = document.getElementById('debugBadge');
 
-// digit -> 0-based grid index (row-major, 0..8), or null for "no bus"
+// Pick this session's category, avoiding an immediate repeat of last time.
+function pickCategory() {
+  const cats = CONFIG.categories;
+  const last = sessionStorage.getItem('lastCategory');
+  let choices = cats;
+  if (cats.length > 1 && last) {
+    choices = cats.filter(c => c.name !== last);
+  }
+  const chosen = choices[Math.floor(Math.random() * choices.length)];
+  sessionStorage.setItem('lastCategory', chosen.name);
+  return chosen;
+}
+
+// digit -> 0-based grid index (row-major, 0..8), or null for "none"
 function targetIndex(digit) {
   return digit === 0 ? null : digit - 1;
 }
@@ -269,7 +312,6 @@ function shuffledSample(pool, n) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  // If the pool is smaller than needed, allow repeats to fill the rest.
   while (arr.length < n) arr.push(pool[Math.floor(Math.random() * pool.length)]);
   return arr.slice(0, n);
 }
@@ -277,20 +319,20 @@ function shuffledSample(pool, n) {
 function renderRound() {
   state.selected = null;
   msgEl.textContent = '';
-  const digit = CONFIG.digitSequence[state.round];
+  const cat = state.category;
+  const emptyPool = cat.emptyImages && cat.emptyImages.length ? cat.emptyImages : CONFIG.defaultEmptyImages;
+  const digit = cat.digitSequence[state.round];
   const target = targetIndex(digit);
 
   let tileImages = new Array(9);
   if (target === null) {
-    // No bus this round.
-    const empties = shuffledSample(CONFIG.emptyImages, 9);
-    tileImages = empties;
+    tileImages = shuffledSample(emptyPool, 9);
   } else {
-    const empties = shuffledSample(CONFIG.emptyImages, 8);
-    const bus = CONFIG.busImages[Math.floor(Math.random() * CONFIG.busImages.length)];
+    const empties = shuffledSample(emptyPool, 8);
+    const targetImg = cat.targetImages[Math.floor(Math.random() * cat.targetImages.length)];
     let e = 0;
     for (let i = 0; i < 9; i++) {
-      tileImages[i] = (i === target) ? bus : empties[e++];
+      tileImages[i] = (i === target) ? targetImg : empties[e++];
     }
   }
 
@@ -312,7 +354,6 @@ function renderRound() {
 }
 
 function selectTile(i) {
-  // Single-select, like tapping the one tile you believe is correct.
   document.querySelectorAll('#grid .tile').forEach(t => t.classList.remove('selected'));
   if (state.selected === i) {
     state.selected = null;
@@ -323,11 +364,11 @@ function selectTile(i) {
 }
 
 function verify() {
-  const digit = CONFIG.digitSequence[state.round];
+  const cat = state.category;
+  const digit = cat.digitSequence[state.round];
   const target = targetIndex(digit);
 
   if (target === null) {
-    // Impossible round — always fails, then moves on.
     fail(true);
     return;
   }
@@ -342,28 +383,27 @@ function verify() {
 function succeed() {
   msgEl.style.color = '#188038';
   msgEl.textContent = 'Verified.';
-  setTimeout(() => {
-    advanceRound();
-  }, CONFIG.advanceDelayMs);
+  setTimeout(() => { advanceRound(); }, CONFIG.advanceDelayMs);
 }
 
 function fail(autoAdvance) {
   msgEl.style.color = '#d93025';
   msgEl.textContent = 'Verification failed. Please try again.';
   if (autoAdvance) {
-    setTimeout(() => {
-      advanceRound();
-    }, CONFIG.advanceDelayMs);
+    setTimeout(() => { advanceRound(); }, CONFIG.advanceDelayMs);
   } else {
-    // Let them retry the same round.
     document.querySelectorAll('#grid .tile').forEach(t => t.classList.remove('selected'));
     state.selected = null;
   }
 }
 
 function advanceRound() {
-  state.round = (state.round + 1) % CONFIG.digitSequence.length;
-  renderRound();
+  gridEl.classList.add('fading');
+  setTimeout(() => {
+    state.round = (state.round + 1) % state.category.digitSequence.length;
+    renderRound();
+    gridEl.classList.remove('fading');
+  }, 300);
 }
 
 function updateDebugBadge(digit, target) {
@@ -371,8 +411,8 @@ function updateDebugBadge(digit, target) {
   if (params.get('debug') === '1') {
     debugBadge.style.display = 'block';
     debugBadge.textContent =
-      `round ${state.round + 1}/${CONFIG.digitSequence.length} — digit: ${digit}` +
-      (target === null ? ' (no bus)' : ` (index ${target})`);
+      `[${state.category.name}] round ${state.round + 1}/${state.category.digitSequence.length} — digit: ${digit}` +
+      (target === null ? ' (none)' : ` (index ${target})`);
   }
 }
 
@@ -383,6 +423,9 @@ checkboxWidget.addEventListener('click', () => {
   setTimeout(() => {
     checkboxWidget.style.display = 'none';
     challenge.style.display = 'block';
+    state.category = pickCategory();
+    state.round = 0;
+    promptText.innerHTML = state.category.prompt;
     renderRound();
   }, 600);
 });
@@ -390,8 +433,7 @@ checkboxWidget.addEventListener('click', () => {
 document.getElementById('verifyBtn').addEventListener('click', verify);
 
 // Cosmetic reshuffle of the current round's non-target images (does not
-// change the round or digit — purely so repeated reloads look plausible).
-document.getElementById('reloadBtn').addEventListener('click', renderRound);
+// change the round, digit, or category — purely so repeated reloads look plausible).
 </script>
 </body>
 </html>
