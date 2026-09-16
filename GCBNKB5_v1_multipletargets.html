@@ -25,6 +25,56 @@
     color: var(--text);
   }
 
+    #loadingScreen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(160deg, #0d1f14, #1b3324 60%, #24422c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    transition: opacity 0.4s ease;
+  }
+  #loadingScreen.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .loading-card {
+    text-align: center;
+    color: #e9e4d8;
+    font-family: Roboto, Arial, Helvetica, sans-serif;
+  }
+  .loading-icon {
+    font-size: 34px;
+    margin-bottom: 12px;
+  }
+  .loading-title {
+    font-size: 15px;
+    letter-spacing: 0.3px;
+    color: #f2ead9;
+    margin-bottom: 6px;
+  }
+  .loading-sub {
+    font-size: 12px;
+    color: #9fb3a1;
+    margin-bottom: 18px;
+  }
+  .progress-track {
+    width: 220px;
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 0 auto;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #c9a24b;
+    border-radius: 2px;
+    transition: width 1.8s ease;
+  }
+
   /* ---- Stage 1: checkbox widget ---- */
   #checkboxWidget {
     width: 302px;
@@ -179,6 +229,16 @@
 </style>
 </head>
 <body>
+<div id="loadingScreen">
+  <div class="loading-card">
+    <div class="loading-icon">🌿</div>
+    <div class="loading-title">Continuing to GCBNKB5: Tikal Project</div>
+    <div class="loading-sub">Verifying your connection is secure…</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+</div>
+
+<div id="checkboxWidget" style="display:none;">
 
 <!-- Stage 1: the classic "I'm not a robot" checkbox -->
 <div id="checkboxWidget">

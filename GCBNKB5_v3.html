@@ -24,7 +24,55 @@
     font-family: Roboto, Arial, Helvetica, sans-serif;
     color: var(--text);
   }
-
+    #loadingScreen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(160deg, #0d1f14, #1b3324 60%, #24422c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    transition: opacity 0.4s ease;
+  }
+  #loadingScreen.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .loading-card {
+    text-align: center;
+    color: #e9e4d8;
+    font-family: Roboto, Arial, Helvetica, sans-serif;
+  }
+  .loading-icon {
+    font-size: 34px;
+    margin-bottom: 12px;
+  }
+  .loading-title {
+    font-size: 15px;
+    letter-spacing: 0.3px;
+    color: #f2ead9;
+    margin-bottom: 6px;
+  }
+  .loading-sub {
+    font-size: 12px;
+    color: #9fb3a1;
+    margin-bottom: 18px;
+  }
+  .progress-track {
+    width: 220px;
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 0 auto;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #c9a24b;
+    border-radius: 2px;
+    transition: width 1.8s ease;
+  }
   /* ---- Stage 1: checkbox widget ---- */
   #checkboxWidget {
     width: 302px;
@@ -184,9 +232,17 @@
 </style>
 </head>
 <body>
+<div id="loadingScreen">
+  <div class="loading-card">
+    <div class="loading-icon">🌞</div>
+    <div class="loading-title">Continuing to GCBNKB5: Tikal Project</div>
+    <div class="loading-sub">Verifying your connection is secure…</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+</div>
 
 <!-- Stage 1: the classic "I'm not a robot" checkbox -->
-<div id="checkboxWidget">
+<div id="checkboxWidget" style="display:none;">
   <div class="box">
     <div class="spinner"></div>
     <svg viewBox="0 0 24 24" fill="none" stroke="#4285f4" stroke-width="3"><path d="M4 12l6 6L20 6"/></svg>
@@ -230,7 +286,7 @@ const CONFIG = {
   // category below that doesn't define its own emptyImages.
   // Update the count (2nd number) to match how many street_images/streetN.jpg
   // files you actually have.
-  defaultEmptyImages: imageList('street_images', 'street', 62),
+  defaultEmptyImages: imageList('street_images', 'street', 97),
 
   // One entry per target category. Add as many as you like — one is chosen
   // at random on every full page load (won't repeat the same one twice in a
@@ -261,7 +317,7 @@ const CONFIG = {
       name: 'motorcycles',
       prompt: 'Select all squares with <span class="strong">motorcycles</span>',
       digitSequence: [3, 3, 3, 3, 7, 9, 0, 1, 5, 1, 0, 3, 8, 9, 3], // REPLACE
-      targetImages: imageList('motorcycle_images', 'motorcycle', 14) // set count to match your folder
+      targetImages: imageList('motorcycle_images', 'motorcycle', 24) // set count to match your folder
     }
     // No trafficlight_images folder was mentioned, so this category is left out
     // for now. Add one back the same way if you create that folder:
@@ -279,7 +335,7 @@ const CONFIG = {
 };
 /* ========================================================================= */
 
-const state = { round: 0, selected: null, category: null };
+const state = { round: 0, selected: null, category: null, lastTargetImage: null };
 
 const checkboxWidget = document.getElementById('checkboxWidget');
 const challenge = document.getElementById('challenge');
@@ -287,6 +343,14 @@ const gridEl = document.getElementById('grid');
 const msgEl = document.getElementById('msg');
 const promptText = document.getElementById('promptText');
 const debugBadge = document.getElementById('debugBadge');
+
+window.addEventListener('load', () => {
+  setTimeout(() => { document.getElementById('progressFill').style.width = '100%'; }, 50);
+  setTimeout(() => {
+    document.getElementById('loadingScreen').classList.add('hidden');
+    checkboxWidget.style.display = 'flex';
+  }, 1900);
+});
 
 // Pick this session's category, avoiding an immediate repeat of last time.
 function pickCategory() {
@@ -329,7 +393,11 @@ function renderRound() {
     tileImages = shuffledSample(emptyPool, 9);
   } else {
     const empties = shuffledSample(emptyPool, 8);
-    const targetImg = cat.targetImages[Math.floor(Math.random() * cat.targetImages.length)];
+    const pool = cat.targetImages.length > 1
+      ? cat.targetImages.filter(img => img !== state.lastTargetImage)
+      : cat.targetImages;
+    const targetImg = pool[Math.floor(Math.random() * pool.length)];
+    state.lastTargetImage = targetImg;
     let e = 0;
     for (let i = 0; i < 9; i++) {
       tileImages[i] = (i === target) ? targetImg : empties[e++];
@@ -369,7 +437,7 @@ function verify() {
   const target = targetIndex(digit);
 
   if (target === null) {
-    fail(true);
+    succeed();
     return;
   }
 
