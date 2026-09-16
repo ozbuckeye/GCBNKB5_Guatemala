@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify you are human</title>
+<style>
+  :root {
+    --border: #d3d3d3;
+    --blue: #4285f4;
+    --blue-dark: #3367d6;
+    --text: #1f1f1f;
+    --muted: #6b6b6b;
+    --bg: #f0f2f5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: Roboto, Arial, Helvetica, sans-serif;
+    color: var(--text);
+  }
+    #loadingScreen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(160deg, #0d1f14, #1b3324 60%, #24422c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    transition: opacity 0.4s ease;
+  }
+  #loadingScreen.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .loading-card {
+    text-align: center;
+    color: #e9e4d8;
+    font-family: Roboto, Arial, Helvetica, sans-serif;
+  }
+  .loading-icon {
+    font-size: 34px;
+    margin-bottom: 12px;
+  }
+  .loading-title {
+    font-size: 15px;
+    letter-spacing: 0.3px;
+    color: #f2ead9;
+    margin-bottom: 6px;
+  }
+  .loading-sub {
+    font-size: 12px;
+    color: #9fb3a1;
+    margin-bottom: 18px;
+  }
+  .progress-track {
+    width: 220px;
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 0 auto;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #c9a24b;
+    border-radius: 2px;
+    transition: width 1.8s ease;
+  }
+  #checkboxWidget {
+    width: 302px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: #fff;
+    box-shadow: 0 0 4px rgba(0,0,0,0.08);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  #checkboxWidget .box {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #c1c1c1;
+    border-radius: 2px;
+    background: #fff;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  #checkboxWidget .box svg { display: none; width: 20px; height: 20px; }
+  #checkboxWidget .label { font-size: 14px; color: #3c4043; }
+  #checkboxWidget .sub { margin-left: auto; text-align: center; opacity: 0.55; }
+  #checkboxWidget .sub .badge {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid #999; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #999; font-weight: bold;
+  }
+  #checkboxWidget .sub .fine { font-size: 8px; color: #999; margin-top: 2px; }
+  #checkboxWidget.checking .box { border-color: var(--blue); }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid #dcdcdc;
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #challenge {
+    display: none;
+    width: 300px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: #fff;
+    box-shadow: 0 0 8px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+  #challenge .prompt {
+    background: #4a4a4a;
+    color: #fff;
+    padding: 12px 16px;
+    font-size: 15px;
+    line-height: 1.35;
+  }
+  #challenge .prompt .strong { font-weight: 500; }
+  #challenge .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: #4a4a4a;
+  }
+  #challenge .tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    cursor: pointer;
+    background: #fff;
+  }
+  #challenge .tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.3s ease;
+  }
+  #challenge .grid.fading .tile img {
+    opacity: 0;
+
+  }
+  #challenge .tile .tick {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 20px; height: 20px;
+    background: var(--blue);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+  }
+  #challenge .tile .tick svg { width: 14px; height: 14px; }
+  #challenge .tile.selected {
+    box-shadow: inset 0 0 0 3px var(--blue);
+  }
+  #challenge .tile.selected .tick { display: flex; }
+
+  #challenge .footer {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    border-top: 1px solid #eee;
+  }
+  #challenge .icon-btn {
+    width: 34px; height: 34px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #757575;
+  }
+  #challenge .icon-btn:hover { background: #f1f1f1; }
+  #challenge .icon-btn svg { width: 20px; height: 20px; fill: currentColor; }
+  #challenge .spacer { flex: 1; }
+  #challenge .msg {
+    font-size: 11px;
+    color: #d93025;
+    padding: 0 4px;
+    min-height: 14px;
+    flex: 1;
+  }
+  #challenge .verify {
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    font-size: 14px;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  #challenge .verify:hover { background: var(--blue-dark); }
+
+</style>
+</head>
+<body>
+<div id="loadingScreen">
+  <div class="loading-card">
+    <div class="loading-icon">🌞</div>
+    <div class="loading-title">Continuing to GCBNKB5: The Tikal Project</div>
+    <div class="loading-sub">Verifying your connection is secure…</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+</div>
+
+<div id="checkboxWidget" style="display:none;">
+  <div class="box">
+    <div class="spinner"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#4285f4" stroke-width="3"><path d="M4 12l6 6L20 6"/></svg>
+  </div>
+  <div class="label">I'm not a robot</div>
+  <div class="sub">
+    <div class="badge">?</div>
+    <div class="fine">Verify</div>
+  </div>
+</div>
+
+<div id="challenge">
+  <div class="prompt">
+    <div id="promptText"></div>
+    <div style="font-size:12px; opacity:0.8; margin-top:2px;">If there are none, click Verify.</div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="footer">
+    <div class="msg" id="msg"></div>
+    <button class="verify" id="verifyBtn">Verify</button>
+  </div>
+</div>
+
+
+
+<script>
+function imageList(folder, prefix, count, ext = 'jpg') {
+  const out = [];
+  for (let i = 1; i <= count; i++) out.push(`${folder}/${prefix}${i}.${ext}`);
+  return out;
+}
+
+const SHIFT_KEY = 4;
+function decodeSeq(encoded) {
+  const shifted = atob(encoded);
+  return shifted.split('').map(ch => (Number(ch) + 10 - SHIFT_KEY) % 10);
+
+}
+const CONFIG = {
+  defaultEmptyImages: imageList('street_images', 'street', 97),
+
+  categories: [
+    {
+      name: 'buses',
+      prompt: 'Select all squares with <span class="strong">buses</span>',
+      digitSequence: decodeSeq('Nzc3NzEzNDU5NTQ3MjM3'),
+      targetImages: imageList('bus_images', 'bus', 19) 
+    },
+    {
+      name: 'fire hydrants',
+      prompt: 'Select all squares with <span class="strong">fire hydrants</span>',
+      digitSequence: decodeSeq('Nzc3NzEzNDU5NTQ3MjM3'), 
+      targetImages: imageList('hydrant_images', 'hydrant', 17)
+    },
+    {
+      name: 'motorcycles',
+      prompt: 'Select all squares with <span class="strong">motorcycles</span>',
+      digitSequence: decodeSeq('Nzc3NzEzNDU5NTQ3MjM3'), 
+      targetImages: imageList('motorcycle_images', 'motorcycle', 24) 
+    }
+  ],
+
+  advanceDelayMs: 700
+};
+/* ========================================================================= */
+
+const state = { round: 0, selected: null, category: null, lastTargetImage: null };
+
+const checkboxWidget = document.getElementById('checkboxWidget');
+const challenge = document.getElementById('challenge');
+const gridEl = document.getElementById('grid');
+const msgEl = document.getElementById('msg');
+const promptText = document.getElementById('promptText');
+
+window.addEventListener('load', () => {
+  setTimeout(() => { document.getElementById('progressFill').style.width = '100%'; }, 50);
+  setTimeout(() => {
+    document.getElementById('loadingScreen').classList.add('hidden');
+    checkboxWidget.style.display = 'flex';
+  }, 1900);
+});
+
+function pickCategory() {
+  const cats = CONFIG.categories;
+  const last = sessionStorage.getItem('lastCategory');
+  let choices = cats;
+  if (cats.length > 1 && last) {
+    choices = cats.filter(c => c.name !== last);
+  }
+  const chosen = choices[Math.floor(Math.random() * choices.length)];
+  sessionStorage.setItem('lastCategory', chosen.name);
+  return chosen;
+}
+
+function targetIndex(digit) {
+  return digit === 0 ? null : digit - 1;
+}
+
+function shuffledSample(pool, n) {
+  const arr = [...pool];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  while (arr.length < n) arr.push(pool[Math.floor(Math.random() * pool.length)]);
+  return arr.slice(0, n);
+}
+
+function renderRound() {
+  state.selected = null;
+  msgEl.textContent = '';
+  const cat = state.category;
+  const emptyPool = cat.emptyImages && cat.emptyImages.length ? cat.emptyImages : CONFIG.defaultEmptyImages;
+  const digit = cat.digitSequence[state.round];
+  const target = targetIndex(digit);
+
+  let tileImages = new Array(9);
+  if (target === null) {
+    tileImages = shuffledSample(emptyPool, 9);
+  } else {
+    const empties = shuffledSample(emptyPool, 8);
+    const pool = cat.targetImages.length > 1
+      ? cat.targetImages.filter(img => img !== state.lastTargetImage)
+      : cat.targetImages;
+    const targetImg = pool[Math.floor(Math.random() * pool.length)];
+    state.lastTargetImage = targetImg;
+    let e = 0;
+    for (let i = 0; i < 9; i++) {
+      tileImages[i] = (i === target) ? targetImg : empties[e++];
+    }
+  }
+
+  gridEl.innerHTML = '';
+  tileImages.forEach((src, i) => {
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.dataset.index = i;
+    tile.innerHTML = `
+      <img src="${src}" alt="">
+      <div class="tick">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M4 12l6 6L20 6"/></svg>
+      </div>`;
+    tile.addEventListener('click', () => selectTile(i));
+    gridEl.appendChild(tile);
+  });
+
+}
+
+function selectTile(i) {
+  document.querySelectorAll('#grid .tile').forEach(t => t.classList.remove('selected'));
+  if (state.selected === i) {
+    state.selected = null;
+  } else {
+    state.selected = i;
+    gridEl.children[i].classList.add('selected');
+  }
+}
+
+function verify() {
+  const cat = state.category;
+  const digit = cat.digitSequence[state.round];
+  const target = targetIndex(digit);
+
+  if (target === null) {
+    succeed();
+    return;
+  }
+
+  if (state.selected === target) {
+    succeed();
+  } else {
+    fail(false);
+  }
+}
+
+function succeed() {
+  msgEl.style.color = '#188038';
+  msgEl.textContent = 'Verified.';
+  setTimeout(() => { advanceRound(); }, CONFIG.advanceDelayMs);
+}
+
+function fail(autoAdvance) {
+  msgEl.style.color = '#d93025';
+  msgEl.textContent = 'Verification failed. Please try again.';
+  if (autoAdvance) {
+    setTimeout(() => { advanceRound(); }, CONFIG.advanceDelayMs);
+  } else {
+    document.querySelectorAll('#grid .tile').forEach(t => t.classList.remove('selected'));
+    state.selected = null;
+  }
+}
+
+function advanceRound() {
+  gridEl.classList.add('fading');
+  setTimeout(() => {
+    state.round = (state.round + 1) % state.category.digitSequence.length;
+    renderRound();
+    gridEl.classList.remove('fading');
+  }, 300);
+}
+
+
+checkboxWidget.addEventListener('click', () => {
+  checkboxWidget.classList.add('checking');
+  checkboxWidget.querySelector('.spinner').style.display = 'inline-block';
+  setTimeout(() => {
+    checkboxWidget.style.display = 'none';
+    challenge.style.display = 'block';
+    state.category = pickCategory();
+    state.round = 0;
+    promptText.innerHTML = state.category.prompt;
+    renderRound();
+  }, 600);
+});
+
+document.getElementById('verifyBtn').addEventListener('click', verify);
+
+</script>
+</body>
+</html>
